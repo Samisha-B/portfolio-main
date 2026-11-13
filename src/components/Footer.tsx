@@ -1,12 +1,16 @@
 import { brand } from '@/brand.config';
 import { Fade } from './Reveal';
+import Wordmark from './Wordmark';
 
 export default function Footer() {
   const nav = [['Home', '#top'], ['Services', '#services'], ['Work', '#work'], ['About', '#about'], ['Contact', '#contact']];
   const services = ['Branding & creative direction', 'Website design & development', 'AI & business automation'];
   const hello = brand.email ? `mailto:${brand.email}` : '#contact';
+  const words = brand.name.split(' ');
+  const top = words[0];
+  const bottom = words.slice(1).join(' ').toLowerCase().replace(/^./, (c) => c.toUpperCase());
   return (
-    <footer data-theme='dark' className='bg-aubergine px-6 pb-8 pt-28 text-blush md:px-16 md:pt-40'>
+    <footer data-theme='dark' className='overflow-hidden bg-aubergine px-6 pt-28 text-blush md:px-16 md:pt-40'>
       <Fade>
         <p className='eyebrow'>Let&apos;s talk</p>
         <a href={hello} className='link-u mt-6 inline-block font-display text-[12vw] font-light leading-[1] tracking-tightest md:text-[7vw]'>
@@ -25,8 +29,10 @@ export default function Footer() {
         </ul>
       </div>
 
-      <p aria-hidden className='mt-24 whitespace-nowrap font-display text-[14vw] font-light uppercase leading-[0.8] tracking-tightest text-blush/90'>{brand.name}</p>
-      <p className='mt-10 text-xs text-blush/45'>© {new Date().getFullYear()} {brand.name}. All rights reserved.</p>
+      <p className='mt-20 text-xs text-blush/45'>© {new Date().getFullYear()} {brand.name}. All rights reserved.</p>
+      <div className='-mb-[3vw] mt-6'>
+        <Wordmark top={top} bottom={bottom} />
+      </div>
     </footer>
   );
 }

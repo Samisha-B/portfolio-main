@@ -1,6 +1,9 @@
 'use client';
-import { Btn } from './Interactions';
-import { ClipReveal, Fade, Words } from './Reveal';
+import { useEffect, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { Words, reduced } from './Reveal';
 
 // IMPORTANT: every entry below is a CONCEPT, not a client project.
 // Replace with real work (add `href`, `status: 'Client work'`) only when it exists.
@@ -13,52 +16,134 @@ const projects = [
   { name: 'Launchpad', industry: 'Startup', services: 'Landing page, automation', desc: 'A conversion-focused startup landing concept with workflow automation.', tone: 'bg-aubergine text-peony' },
 ];
 
+const N = projects.length;
+const STEP = 360 / N;
+const pad = (n: number) => String(n).padStart(2, '0');
+
 export default function Work() {
+  const sec = useRef<HTMLElement>(null);
+  const stage = useRef<HTMLDivElement>(null);
+  const ring = useRef<HTMLDivElement>(null);
+  const rotRef = useRef(0);
+  const applyRef = useRef<(deg: number) => void>(() => {});
+  const [active, setActive] = useState(0);
+  const [manual, setManual] = useState(false);
+
+  useEffect(() => {
+    gsap.registerPlugin(ScrollTrigger);
+    const el = sec.current;
+    const st = stage.current;
+    const rg = ring.current;
+    if (!el || !st || !rg) return;
+    const cards = Array.from(rg.querySelectorAll<HTMLElement>('[data-c]'));
+    let R = 0;
+    let last = -1;
+
+    const apply = (deg: number) => {
+      rotRef.current = deg;
+      rg.style.transform = `translateZ(${-R}px) rotateY(${-deg}deg)`;
+      cards.forEach((c, i) => {
+        const diff = Math.abs((((i * STEP - deg + 180) % 360) + 360) % 360 - 180);
+        c.style.opacity = String(Math.max(0.12, 1 - (diff / 120) * 0.8));
+        c.style.filter = diff > 8 ? `blur(${Math.min(4, diff / 30).toFixed(1)}px)` : 'none';
+      });
+      const idx = ((Math.round(deg / STEP) % N) + N) % N;
+      if (idx !== last) {
+        last = idx;
+        setActive(idx);
+      }
+    };
+    applyRef.current = apply;
+
+    const layout = () => {
+      const mob = window.innerWidth < 768;
+      const w = Math.min(st.clientHeight * 0.8 * 0.8, window.innerWidth * (mob ? 0.62 : 0.3));
+      const h = w / 0.8;
+      R = (w / 2 / Math.tan(Math.PI / N)) * 1.28;
+      cards.forEach((c, i) => {
+        c.style.width = `${w}px`;
+        c.style.height = `${h}px`;
+        c.style.marginLeft = `${-w / 2}px`;
+        c.style.marginTop = `${-h / 2}px`;
+        c.style.transform = `rotateY(${i * STEP}deg) translateZ(${R}px)`;
+      });
+      apply(rotRef.current);
+    };
+    layout();
+    window.addEventListener('resize', layout);
+
+    if (reduced()) {
+      setManual(true);
+      return () => window.removeEventListener('resize', layout);
+    }
+    const trig = ScrollTrigger.create({
+      trigger: el,
+      start: 'top top',
+      end: '+=400%',
+      pin: true,
+      scrub: true,
+      snap: { snapTo: 1 / (N - 1), duration: { min: 0.25, max: 0.7 }, ease: 'power2.inOut' },
+      onUpdate: (s) => apply(s.progress * (N - 1) * STEP),
+    });
+    return () => {
+      trig.kill();
+      window.removeEventListener('resize', layout);
+    };
+  }, []);
+
+  const step = (dir: number) => applyRef.current((Math.round(rotRef.current / STEP) + dir) * STEP);
+  const p = projects[active];
+
   return (
-    <section id='work' data-theme='light' className='bg-blush px-6 py-32 text-plum md:px-16 md:py-48'>
+    <section id='work' ref={sec} data-theme='light' className='relative flex h-screen flex-col overflow-hidden bg-blush px-6 pb-8 pt-24 text-plum md:px-16 md:pb-10 md:pt-28'>
       <div className='flex items-end justify-between gap-6'>
         <div>
           <p className='eyebrow !text-plum/60'>(03) Selected work</p>
-          <Words as='h2' text='Less talk. *More show.*' className='mt-8 font-display text-[13vw] font-light leading-[0.95] tracking-tightest md:text-[8vw]' />
+          <Words as='h2' text='Less talk. *More show.*' className='mt-3 font-display text-[10vw] font-light leading-[0.95] tracking-tightest md:text-[4.4vw]' />
         </div>
-        <p aria-hidden className='hidden font-serif text-5xl italic text-peony md:block'>({String(projects.length).padStart(2, '0')})</p>
+        <p aria-hidden className='font-serif text-3xl italic text-peony md:text-5xl'>{pad(active + 1)} / {pad(N)}</p>
       </div>
-      <p className='mt-6 max-w-md text-sm text-plum/65'>These are concept projects, not client work. Real case studies will be added as they ship.</p>
 
-      <div className='mt-24 md:mt-40'>
-        {projects.map((p, i) => {
-          const odd = i % 2 === 1;
-          return (
-            <article key={p.name} className={`group grid items-end gap-6 md:grid-cols-12 md:gap-10 ${i === 0 ? '' : odd ? 'mt-24 md:mt-56' : 'mt-24 md:mt-44'}`}>
-              <ClipReveal className={`${odd ? 'md:col-span-6 md:col-start-6 md:row-start-1' : 'md:col-span-7'}`}>
-                <div className={`relative flex aspect-[5/4] flex-col justify-between p-6 transition-transform duration-[1600ms] ease-[cubic-bezier(.16,1,.3,1)] group-hover:scale-[1.035] md:p-10 ${p.tone}`}>
-                  <div aria-hidden className='absolute inset-4 border border-current opacity-25 md:inset-6' />
-                  <div className='relative flex justify-between text-[11px] uppercase tracking-[0.22em] opacity-80'>
-                    <span>Concept</span>
-                    <span>0{i + 1}</span>
-                  </div>
-                  <p className='relative font-serif text-[13vw] italic leading-[0.9] md:text-[5.6vw]'>{p.name}</p>
+      <div ref={stage} className='relative min-h-0 flex-1' style={{ perspective: '1600px' }}>
+        <div ref={ring} className='absolute inset-0' style={{ transformStyle: 'preserve-3d' }}>
+          {projects.map((pr, i) => (
+            <div key={pr.name} data-c aria-hidden className={`absolute left-1/2 top-1/2 overflow-hidden ${pr.tone}`} style={{ backfaceVisibility: 'hidden' }}>
+              <div className='absolute inset-3 border border-current opacity-25 md:inset-4' />
+              <div className='relative flex h-full flex-col justify-between p-5 md:p-7'>
+                <div className='flex justify-between text-[10px] uppercase tracking-[0.22em] opacity-80'>
+                  <span>Concept</span>
+                  <span>{pad(i + 1)}</span>
                 </div>
-              </ClipReveal>
-              <Fade className={`${odd ? 'md:col-span-4 md:col-start-1 md:row-start-1' : 'md:col-span-4 md:col-start-9'}`}>
-                <p className='font-serif text-xl italic text-peony'>0{i + 1}</p>
-                <h3 className='mt-2 font-display text-3xl font-light tracking-tightest md:text-4xl'>
-                  <span className='link-u group-hover:[background-size:100%_1px]'>{p.name}</span>
-                </h3>
-                <p className='mt-4 max-w-sm text-base text-plum/75'>{p.desc}</p>
-                <dl className='mt-8 text-[11px] uppercase tracking-[0.2em]'>
-                  <div className='flex justify-between border-t border-plum/15 py-3'><dt className='text-plum/55'>Industry</dt><dd>{p.industry}</dd></div>
-                  <div className='flex justify-between gap-6 border-t border-plum/15 py-3'><dt className='text-plum/55'>Services</dt><dd className='text-right'>{p.services}</dd></div>
-                </dl>
-              </Fade>
-            </article>
-          );
-        })}
+                <p className='font-serif text-3xl italic leading-[0.9] md:text-5xl'>{pr.name}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className='absolute bottom-0 left-1/2 -translate-x-1/2 text-[10px] uppercase tracking-[0.25em] text-plum/50'>
+          {manual ? '' : 'Scroll to rotate'}
+        </p>
       </div>
 
-      <div className='mt-32 flex justify-center md:mt-48'>
-        <Btn href='#contact' tone='light'>Start a project</Btn>
+      <div className='mt-4 grid items-end gap-4 md:grid-cols-12 md:gap-10' aria-live='polite'>
+        <motion.div key={active} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }} className='md:col-span-6'>
+          <h3 className='font-display text-2xl font-light tracking-tightest md:text-4xl'>{p.name}</h3>
+          <p className='mt-2 max-w-md text-sm text-plum/75'>{p.desc}</p>
+        </motion.div>
+        <dl className='hidden text-[10px] uppercase tracking-[0.2em] md:col-span-4 md:col-start-8 md:block'>
+          <div className='flex justify-between border-t border-plum/15 py-2'><dt className='text-plum/55'>Industry</dt><dd>{p.industry}</dd></div>
+          <div className='flex justify-between gap-6 border-t border-plum/15 py-2'><dt className='text-plum/55'>Services</dt><dd className='text-right'>{p.services}</dd></div>
+        </dl>
+        <div className='flex items-center gap-6 md:col-span-2 md:justify-end'>
+          {manual && (
+            <>
+              <button onClick={() => step(-1)} className='link-u text-[11px] uppercase tracking-[0.22em]'>Prev</button>
+              <button onClick={() => step(1)} className='link-u text-[11px] uppercase tracking-[0.22em]'>Next</button>
+            </>
+          )}
+          {!manual && <a href='#contact' className='link-u text-[11px] uppercase tracking-[0.22em]'>Start a project</a>}
+        </div>
       </div>
+      <p className='mt-3 text-[10px] text-plum/55'>These are concept projects, not client work. Real case studies will be added as they ship.</p>
     </section>
   );
 }
