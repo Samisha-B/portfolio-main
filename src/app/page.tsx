@@ -1,5 +1,6 @@
 import Nav from '@/components/Nav';
 import Hero from '@/components/Hero';
+import DepthGallery from '@/components/DepthGallery';
 import Work from '@/components/Work';
 import EnquiryForm from '@/components/EnquiryForm';
 import Footer from '@/components/Footer';
@@ -15,6 +16,7 @@ export default function Page() {
       <main id='main'>
         <Hero />
         <Intro />
+        <DepthGallery />
         <Services />
         <Work />
         <Why />
